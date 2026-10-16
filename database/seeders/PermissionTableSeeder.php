@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 
@@ -21,11 +20,16 @@ class PermissionTableSeeder extends Seeder
            'product-list',
            'product-create',
            'product-edit',
-           'product-delete'
+           'product-delete',
+           'student-list',
+           'student-create',
+           'student-edit',
+           'student-delete',
         ];
 
         foreach ($permissions as $permission) {
-             Permission::create(['name' => $permission]);
+             // firstOrCreate = safe to run again, no duplicate error
+             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
     }
 }

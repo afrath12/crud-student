@@ -9,7 +9,7 @@ use App\Http\Controllers\ProductController;
 
 
 // routres for student crud
-Route::get('/', [StudentController::class, 'index']);
+Route::get('/', [StudentController::class, 'index'])->name('students.index');
 Route::get('/students/create', [StudentController::class, 'create']);
 Route::post('/students/store', [StudentController::class, 'store']);
 Route::get('/students/{id}/show', [StudentController::class, 'show']);

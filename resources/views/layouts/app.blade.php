@@ -52,6 +52,7 @@
                         @else
 
                             <li><a class="nav-link" href="{{ route('users.index') }}">Manage Users</a></li>
+                               <li><a class="nav-link" href="{{ route('students.index') }}">Manage Students</a></li>
                             <li><a class="nav-link" href="{{ route('roles.index') }}">Manage Role</a></li>
                             <li><a class="nav-link" href="{{ route('products.index') }}">Manage Product</a></li>
                             <li class="nav-item dropdown">
@@ -111,7 +112,7 @@
                             <div class="card-body">
 
                                 @yield('content')
-
+@yield('main')
                             </div>
 
                         </div>
