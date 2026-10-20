@@ -8,6 +8,7 @@ use App\Models\Student;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 
 class StudentController extends Controller
 {
@@ -23,26 +24,33 @@ class StudentController extends Controller
         return view('students.create');
     }
 
-    public function store(Request $request): RedirectResponse
-    {
-        $this->validate($request, [
-            'name' => 'required',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:10000', // max size 10MB
-            'email' => 'required|email',
-        ]);
+    public function store(Request $request): JsonResponse
+{
+    // student_id is empty when creating, filled when editing
+    $isEdit = $request->filled('student_id');
 
-        $input = $request->all();
+    $this->validate($request, [
+        'name'  => 'required',
+        'email' => 'required|email',
+        // image is required when creating, optional when editing
+        'image' => ($isEdit ? 'nullable' : 'required') . '|image|mimes:jpeg,png,jpg,gif|max:10000',
+    ]);
 
-        // store the image in the public folder
+    $input = $request->only(['name', 'email']);
+
+    // only touch the image when a new file was chosen
+    if ($request->hasFile('image')) {
         $imageName = time() . '.' . $request->image->extension();
         $request->image->move(public_path('students'), $imageName);
         $input['image'] = $imageName;
-
-        Student::create($input);
-
-        return redirect()->route('students.index')
-                        ->with('success', 'Student created successfully');
     }
+
+    // id found -> update that student, otherwise -> create a new one
+    Student::updateOrCreate(['id' => $request->student_id], $input);
+
+    session()->flash('success', $isEdit ? 'Student updated successfully' : 'Student created successfully');
+    return response()->json(['success' => true]);
+}
 
     public function show($id): View
     {
@@ -50,37 +58,9 @@ class StudentController extends Controller
         return view('students.show', compact('student'));
     }
 
-    public function edit($id): View
+    public function edit($id): JsonResponse
     {
-        $student = Student::find($id);
-        return view('students.edit', compact('student'));
-    }
-
-    public function update(Request $request, $id): RedirectResponse
-    {
-        $this->validate($request, [
-            'name' => 'required',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10000', // max size 10MB
-            'email' => 'required|email',
-        ]);
-
-        $input = $request->all();
-
-        if ($request->hasFile('image')) {
-            // a new image was uploaded, store it in the public folder
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('students'), $imageName);
-            $input['image'] = $imageName;
-        } else {
-            // no new image, keep the old one
-            $input = Arr::except($input, ['image']);
-        }
-
-        $student = Student::find($id);
-        $student->update($input);
-
-        return redirect()->route('students.index')
-                        ->with('success', 'Student updated successfully');
+    return response()->json(Student::findOrFail($id));
     }
 
     public function destroy($id): RedirectResponse

@@ -11,10 +11,10 @@ use App\Http\Controllers\ProductController;
 // routres for student crud
 Route::get('/', [StudentController::class, 'index'])->name('students.index');
 //Route::get('/students/create', [StudentController::class, 'create']);
-Route::post('/students/store', [StudentController::class, 'store']);
-//Route::get('/students/{id}/show', [StudentController::class, 'show']);
+Route::post('/students/store', [StudentController::class, 'store']); 
+Route::get('/students/{id}/edit', [StudentController::class, 'edit']);
 //Route::get('/students/{id}/edit', [StudentController::class, 'edit']);
-Route::put('/students/{id}/update', [StudentController::class, 'update']);
+//Route::put('/students/{id}/update', [StudentController::class, 'update']);
 Route::get('/students/{id}/delete', [StudentController::class, 'destroy']);
 
 require __DIR__.'/auth.php';

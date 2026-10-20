@@ -7,9 +7,8 @@
     <h5><i class="bi bi-person"></i> Student Details</h5>
 
     <!--opens the Add modal-->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
-      New Student
-    </button>
+    <button type="button" class="btn btn-primary" id="createNewStudent">New Student</button>
+</div>
   </div>
 
   <!--success message after create / update / delete-->
@@ -42,11 +41,9 @@
           <td><img src="{{ asset('students/'.$student->image) }}" style="width:100px; height:100px; object-fit:contain"/></td>
           <td>{{ $student->email }}</td>
           <td>
-            <!--edit button opens that student's own modal-->
-            <button type="button" class="btn btn-dark btn-sm"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editStudentModal{{ $student->id }}">
-              <i class="bi bi-pencil-square"></i>
+            <!--edit button :-to open the edit modal-->
+            <button type="button" class="btn btn-dark btn-sm editStudent" data-id="{{ $student->id }}">
+            <i class="bi bi-pencil-square"></i>
             </button>
 
             <!--delete button with confirmation-->
@@ -72,161 +69,163 @@
 </div>
 
 
-<!-- ADD MODAL -->
- <!-- true only when the last submitted form was the Add form (so we show its errors/old values here) -->
-@php $addFailed = old('_form') === 'add'; @endphp
-<div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
+<!-- "fade" = smooth animation, "tabindex=-1" = lets the Esc key close it -->
+<div class="modal fade" id="ajaxModel" tabindex="-1" aria-hidden="true">
+  <!-- The popup box. "modal-dialog-centered" puts it in the middle of the screen -->
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
 
-      <!-- enctype="multipart/form-data" is required to upload the image file -->
-      <form action="/students/store" method="post" enctype="multipart/form-data">
-        <!-- CSRF token for security -->
-        @csrf
-        <input type="hidden" name="_form" value="add">
-        <!-- tells us which form was submitted, used when validation fails -->
 
-        <div class="modal-header">
-          <h5 class="modal-title">Add New Student</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
+    <!-- The white content area inside the popup -->
+      <div class="modal-header">
+        <!-- Title is empty here. JavaScript fills it with "Add New Student" or "Edit Student" -->
+        <h5 class="modal-title" id="modelHeading"></h5>
+        <!-- The X button at the top right. data-bs-dismiss="modal" closes the popup -->
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
 
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Student Name</label>
-            <input type="text" name="name" placeholder="Enter Your name"
-                   class="form-control @if($addFailed && $errors->has('name')) is-invalid @endif"
-                   value="{{ $addFailed ? old('name') : '' }}">
-            @if($addFailed && $errors->has('name'))
-              <div class="invalid-feedback">{{ $errors->first('name') }}</div>
-            @endif
+      <!--MIDDLE PART OF THE POPUP (the form)-->
+      <div class="modal-body">
+        <!-- The form. enctype="multipart/form-data" is required to upload files (the image) -->
+        <form id="studentForm" name="studentForm" enctype="multipart/form-data">
+          <!-- hidden field ,if empty create student ,has number then edit student-->
+          <input type="hidden" name="student_id" id="student_id">
+          @csrf
+
+          <!-- validation errors are listed here by JavaScript -->
+          <div class="alert alert-danger print-error-msg" style="display:none">
+            <ul></ul>
           </div>
 
-          <!-- image field (file inputs cannot be refilled, so no old value here) -->
+          <!-- form fields for name, image, and email -->
           <div class="mb-3">
-            <label class="form-label">Student image</label>
-            <input type="file" name="image"
-                   class="form-control @if($addFailed && $errors->has('image')) is-invalid @endif">
-            @if($addFailed && $errors->has('image'))
-              <div class="invalid-feedback">{{ $errors->first('image') }}</div>
-            @endif
+            <label for="name" class="form-label">Student Name</label>
+            <input type="text" class="form-control" id="name" name="name" placeholder="Enter Your name">
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Student Email</label>
-            <input type="email" name="email" placeholder="Enter Your email"
-                   class="form-control @if($addFailed && $errors->has('email')) is-invalid @endif"
-                   value="{{ $addFailed ? old('email') : '' }}">
-            @if($addFailed && $errors->has('email'))
-              <div class="invalid-feedback">{{ $errors->first('email') }}</div>
-            @endif
+            <label for="image" class="form-label">Student Image</label>
+            <!-- current image, shown only when editing -->
+            <div id="currentImageBox" class="mb-2" style="display:none">
+              <img id="currentImage" class="img-thumbnail" style="max-width:150px;">
+              <div class="form-text">Current image. Choose a new file only to replace it.</div>
+            </div>
+            <input type="file" class="form-control" id="image" name="image">
           </div>
-        </div>
 
-        <!-- modal footer: save and cancel buttons -->
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-dark">Save Student</button>
+          <div class="mb-3">
+            <label for="email" class="form-label">Student Email</label>
+            <input type="email" class="form-control" id="email" name="email" placeholder="Enter Your email">
+          </div>
+
+          <!-- The Save and Cancel buttons at the bottom of the form -->
+          <button type="submit" class="btn btn-dark" id="saveBtn" value="create">Save Student</button>
           <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
+        </form>
+      </div>
 
     </div>
   </div>
 </div>
 
-
-<!-- EDIT MODALS (one per student, already pre-filled) -->
-@foreach ($data as $student)
-@php $editFailed = old('_form') === 'edit' && old('_student_id') == $student->id; @endphp
-<div class="modal fade" id="editStudentModal{{ $student->id }}" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-
-    <!-- form posts to this student's update route -->
-      <form action="/students/{{ $student->id }}/update" method="post" enctype="multipart/form-data">
-        @csrf
-        <!-- HTML forms only support GET/POST, so we spoof PUT for the update route -->
-        @method('PUT')
-        <!-- identifies this as the edit form and which student, used when validation fails -->
-        <input type="hidden" name="_form" value="edit">
-        <input type="hidden" name="_student_id" value="{{ $student->id }}">
-
-         <!-- modal body: pre-filled form fields -->
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Student</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-
-        <div class="modal-body">
-          <div class="mb-3">
-            <!-- name field: shows old input if validation failed, otherwise the saved name -->
-            <label class="form-label">Student Name</label>
-            <input type="text" name="name"
-                   class="form-control @if($editFailed && $errors->has('name')) is-invalid @endif"
-                   value="{{ $editFailed ? old('name') : $student->name }}">
-            @if($editFailed && $errors->has('name'))
-              <div class="invalid-feedback">{{ $errors->first('name') }}</div>
-            @endif
-          </div>
-
-          <div class="mb-3">
-            <!-- show the current image if the student has one -->
-            <label class="form-label">Student Image</label>
-            @if($student->image)
-              <div class="mb-2">
-                <img src="{{ asset('students/'.$student->image) }}" class="img-thumbnail" style="max-width:150px;">
-                <div class="form-text">Current image. Choose a new file only to replace it.</div>
-              </div>
-            @endif
-            <input type="file" name="image"
-                   class="form-control @if($editFailed && $errors->has('image')) is-invalid @endif">
-            @if($editFailed && $errors->has('image'))
-              <div class="invalid-feedback">{{ $errors->first('image') }}</div>
-            @endif
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Student Email</label>
-            <input type="email" name="email"
-                   class="form-control @if($editFailed && $errors->has('email')) is-invalid @endif"
-                   value="{{ $editFailed ? old('email') : $student->email }}">
-            @if($editFailed && $errors->has('email'))
-              <div class="invalid-feedback">{{ $errors->first('email') }}</div>
-            @endif
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-dark">Update Student</button>
-          <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
-
-    </div>
-  </div>
-</div>
-@endforeach
-
-
-<!-- Reopen the correct modal when validation fails -->
- <!-- after a failed validation the page reloads and modals are closed, so we reopen the right one -->
-@if ($errors->any())
+<!-- Load the jQuery library -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-  // wait until the page is fully loaded so the modal elements exist
-  document.addEventListener('DOMContentLoaded', function () {
-    // values sent back by the hidden inputs (_form and _student_id)
-    const formType  = @json(old('_form'));
-    const studentId = @json(old('_student_id'));
+  $(function () {
 
-     // pick the edit modal of that student, otherwise fall back to the add modal
-    const modalId = (formType === 'edit' && studentId)
-        ? 'editStudentModal' + studentId
-        : 'addStudentModal';
+    // Get the Bootstrap modal (popup) object for the element with id="ajaxModel"
+    // getOrCreateInstance = reuse it if it exists, otherwise make a new one
+    // We keep it in "modal" so we can call modal.show() and modal.hide() later
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ajaxModel'));
 
-    // create the Bootstrap modal and show it
-    new bootstrap.Modal(document.getElementById(modalId)).show();
+    //Click to Create Button
+    
+    // When the "Add New Student" button is clicked
+    $('#createNewStudent').click(function () {  // mark the save button as "create mode"
+      $('#saveBtn').val("create-student");      // empty hidden id field = this is a NEW student
+      $('#student_id').val('');                 // empty id = create
+      $('#studentForm').trigger("reset");       // clear all the form inputs
+      $('.print-error-msg').hide();             // hide any old validation error box
+      $('#currentImageBox').hide();             // hide the "current image" preview (no image yet)
+      $('#modelHeading').html("<i class='bi bi-plus-square-fill'></i> Add New Student"); // set the popup title
+      modal.show();                             // open the popup
+    });
+
+   
+    //Click to Edit Button
+
+    // Listen for clicks on any ".editStudent" button
+    // 'body' is used because table rows may be added later (event delegation)
+    $('body').on('click', '.editStudent', function () {
+      var student_id = $(this).data('id');       // read the student's id from the button's data-id attribute
+     
+     // Send a GET request to /students/{id}/edit to fetch that student's data
+      $.get("{{ url('students') }}" + '/' + student_id + '/edit', function (data) {
+          $('#studentForm').trigger("reset");     // clear the form first
+          $('.print-error-msg').hide();           // hide old error messages
+          $('#modelHeading').html("<i class='bi bi-pencil-square'></i> Edit Student"); // set popup title to Edit
+          $('#saveBtn').val("edit-student");     // mark the save button as "edit mode"
+          $('#student_id').val(data.id);        // put the id in the hidden field = this is an UPDATE
+          $('#name').val(data.name);            // fill the name input with the student's name
+          $('#email').val(data.email);         // fill the name input with the student's email
+
+          // If the student has an image, show it in the "current image" box; otherwise hide that box
+          if (data.image) {
+              $('#currentImage').attr('src', "{{ asset('students') }}/" + data.image);
+              $('#currentImageBox').show();
+          } else {
+              $('#currentImageBox').hide();
+          }
+          modal.show();
+      });
+    });
+
+    //Create / Update Code
+    // When the form is submitted (Save button clicked)
+    $('#studentForm').submit(function (e) {
+      e.preventDefault();         // stop the normal page reload form submit
+      $('#saveBtn').html('Sending..'); // change button text so the user knows it is working
+
+
+      // Send the form data to the server using AJAX (no page reload)
+      $.ajax({
+        data: new FormData(this),               // collect all form fields, including the image file
+        processData: false,                     // don't convert FormData to a string (required for files)
+        contentType: false,                     //let the browser set the correct content type (required for files)
+        url: "{{ url('students/store') }}",     // the Laravel route that handles create AND update
+        type: "POST",                           // use the POST method
+        dataType: 'json',                       // expect JSON back from the server
+
+      // If the server responds with success, close the modal
+      //  and reload the page to show the new/updated student
+        success: function (data) {
+          modal.hide();
+          window.location.reload();             
+        },
+
+        // If the server replies with an error
+        error: function (xhr) {
+          $('#saveBtn').html('Save Student');  // put the button text back to normal
+          if (xhr.status === 422) {            // Laravel validation error -422
+            printErrorMsg(xhr.responseJSON.errors); // show the validation errors in the red box
+          } else {
+            alert('Something went wrong. Please try again.');
+          }
+        }
+      });
+    });
+
+    // "errors" looks like: { name: ["Name is required"], email: ["Email is invalid"] }
+    function printErrorMsg(errors) {
+      $('.print-error-msg').find('ul').html('');     // clear old error list items
+      $('.print-error-msg').css('display', 'block'); // make the red error box visible
+      $.each(errors, function (key, value) {
+
+      // value[0] = the first error message for that field; add it as a list item
+        $('.print-error-msg').find('ul').append('<li>' + value[0] + '</li>');
+      });
+    }
+
   });
 </script>
-@endif
-
 @endsection
